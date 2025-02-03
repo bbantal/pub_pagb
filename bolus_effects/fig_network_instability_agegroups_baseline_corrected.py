@@ -253,6 +253,34 @@ for group_key in stats_ses:
 
 # %%
 # =============================================================================
+# Comparisons of variances
+# =============================================================================
+
+# Define groups
+d1_key = "[40, 60)"
+d2_key = "[60, 80)"
+print("d1:", d1_key, "\nd2:", d2_key)
+
+# Extract the two distributions
+d1 = wdf.query(f"session == 'bhb' & age_bin == '{d1_key}'")["instability"]
+d2 = wdf.query(f"session == 'bhb' & age_bin == '{d2_key}'")["instability"]
+
+# Plot histograms
+plt.figure(figsize=(3.6, 3.6))
+sns.histplot(d1, color="darkolivegreen", bins=20, kde=True, stat="density", label=d1_key)
+sns.histplot(d2, color="purple", bins=20, kde=True, stat="density", label=d2_key)
+plt.legend()
+
+# Test for normality
+print("d1: ", stats.shapiro(d1))
+print("d2: ", stats.shapiro(d2))
+
+# Test for equal variances
+print("levene test:", stats.levene(d1.values, d2.values))
+print("bartlett test:", stats.bartlett(d1.values, d2.values))
+
+# %%
+# =============================================================================
 # Checkig Motion as a potential confounder
 # =============================================================================
 

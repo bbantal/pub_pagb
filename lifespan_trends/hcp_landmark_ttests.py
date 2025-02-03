@@ -15,10 +15,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import itertools
-import statsmodels.formula.api as smf
 from scipy import stats
-import semopy
 
 # %%
 # =============================================================================
@@ -27,7 +24,6 @@ import semopy
 
 # Define filepaths
 HOMEDIR = os.path.expanduser("~/")
-SRCDIR = "/shared/projects/gene_expression_brain_maps/data/"
 
 # Load demographics info
 demo = pd \
@@ -249,7 +245,7 @@ sns.heatmap(data_phys[cols].corr(), cmap="seismic", center=0, annot=True)
 
 
 # %%
-# T-tests around landmark points
+# T-tests around landmark points (Figure 1B)
 # ----------------------------------------------------------------------------------------------
 
 # Some rc formatting
@@ -270,9 +266,9 @@ cols_rel = ["hba1c", "systolic", "diastolic", "crp"]
 col_labels = {
     "hba1c": "HbA1c",
     # "glucose": "Fasting\nBlood\nGlucose",
-    "systolic": "Systolic\nBlood\nPressure",
-    "diastolic": "Diastolic\nBlood\nPressure",
-    "crp": "Blood\nCRP",
+    "systolic": "SysBP",
+    "diastolic": "DiaBP",
+    "crp": "CRP",
 }
 
 # colors = ["#0E67A6", "#F5A94D"]
@@ -280,9 +276,6 @@ colors = ["#0E67A6", "orange"]
 
 # Get reference changes
 # ----------
-
-# Age range
-# age_range = sdf["age"].max() - sdf["age"].min()
 
 # Initiate dict for reference amplitudes
 norm_fact = {}
@@ -304,7 +297,7 @@ for col in cols_rel:
 # ------
 
 # Start figure
-plt.subplots(2, 1, sharey=False, figsize=(3.625, 2.85))
+plt.subplots(1, 2, sharey=True, figsize=(3.625, 2.9))
 
 # Irerate over thresholds
 for j, threshold_str in enumerate(["alpha", "I"]):
@@ -403,42 +396,39 @@ for j, threshold_str in enumerate(["alpha", "I"]):
     # ------
 
     # Current subplot
-    plt.subplot(2, 1, j+1)
+    plt.subplot(1, 2, j+1)
 
     # Plot
-    plt.bar(diffs_normalized.keys(), diffs_normalized.values(), yerr=diffs_errors_normalized.values(),
-        color=colors[j], edgecolor="black", linewidth=1, alpha=0.8, zorder=2,
-        capsize=5, error_kw={"elinewidth": 1, "capthick": 1})
-
+    plt.errorbar(np.arange(0, len(cols_rel)), diffs_normalized.values(),
+                 yerr=list(diffs_errors_normalized.values()),
+                color=colors[j], fmt="o", capsize=5, elinewidth=1.5, capthick=1.5, zorder=2)
+    
+    
+    
     # Formatting
-    # plt.grid(axis="y", zorder=1)
+    plt.xlim([plt.xlim()[0] - 0.3, plt.xlim()[1] + 0.3])
     plt.ylim([plt.ylim()[0], plt.ylim()[1]*1.1])  # Increase y lim by 10%
-    plt.ylim([-2.3, 6.2])
-    plt.yticks(np.arange(-2, 7, 2))
+    plt.ylim([-2.3, 5.6])
+    plt.yticks(np.arange(-2, 6, 1))
 
-    title_symbol = r"$\alpha=$" if threshold_str == "alpha" else r"$I=$"
+    title_symbol = r"$\mathbf{\alpha=}$" if threshold_str == "alpha" \
+            else r"$\mathbf{I=}$"
     plt.title(
-        "Landmark: " + title_symbol + f"{eval(threshold_str):.1f}y")
+        title_symbol + f"{eval(threshold_str):.1f}y", fontweight="bold", pad=5)
     plt.axhline(y=0, color="black", lw=1)
-    if j==1:
-        plt.xticks(np.arange(0, len(cols_rel)), col_labels.values(), fontsize=9)
-        plt.ylabel(" "*25 + "Normalized Mean Change [%]", labelpad=0)
-    else:
-        plt.xticks(np.arange(0, len(cols_rel)), [])
-
-    # if j==1:
-    #     ax = plt.gca()
-    #     ax.set_position([0.6, 0, 0.35, 0.5])
+    plt.xticks(np.arange(0, len(cols_rel)), col_labels.values(), fontsize=9, rotation=45)
+    if j==0:
+        plt.ylabel(" "*0 + "Normalized Mean Change [%]", labelpad=0)
 
     # Annotate p values
     for i, col in enumerate(cols_rel):
-        # f"{diffs_p[col]:.1g}\n" + \
         text = ("n.s." if diffs_p[col] > 0.05 else "*" if diffs_p[col] > 0.01 \
-                else "**" if diffs_p[col] > 0.001 else "***" if diffs_p[col] > 1e-5 else "****")
+                else " **" if diffs_p[col] > 0.001 else " ***" if diffs_p[col] > 1e-5 else "  ****")
         x = i
         y = 0.98
-        plt.annotate(text, xy=[x, y], va="top", ha="center", fontsize=14, xycoords=("data", "axes fraction"))
+        plt.annotate(text, xy=[x, y], va="top", ha="center", fontsize=11, xycoords=("data", "axes fraction"))
 
 # # Save
-plt.tight_layout(w_pad=4.5, rect=(0, 0, 1, 1))
-plt.savefig("/shared/home/botond/results/pagb/fig_hcp_landmark_ttests_stacked.pdf", transparent=True, dpi=300)
+plt.tight_layout(w_pad=0, rect=(0, 0, 1, 1.))
+# plt.savefig("/shared/home/botond/results/pagb/fig_hcp_landmark_ttests_errorbars_2panel.pdf",
+#             transparent=True, dpi=300)

@@ -334,3 +334,95 @@ model = smf.ols(formula="instability ~ age", data=wdf)
 results = model.fit()
 print(results.summary())
 results.pvalues["age"]
+
+# %%
+# =============================================================================
+# Analysis of motion as a potential confounder
+# =============================================================================
+
+# Load motion data
+# -----------
+
+# Subjects
+subjects = wdf.index
+
+# Sessions
+sessions = [
+    "rfMRI_REST1_AP",
+    "rfMRI_REST1_PA",
+    "rfMRI_REST2_AP",
+    "rfMRI_REST2_PA"
+]
+
+# Itereate over subjects
+for subject in tqdm(subjects, total=len(subjects)):
+    
+    # Initialize list to store motion values
+    values = []
+
+    # Iterate over all sessions
+    for session in sessions:
+        
+        # Filename
+        filename = SRCDIR + "rsfMRI/fmriresults01/" \
+            f"{subject}_V1_MR/MNINonLinear/Results/{session}/Movement_RelativeRMS_mean.txt"
+
+        try:
+            # Open the file in read mode
+            with open(filename, 'r') as file:
+            
+                # Read the content
+                value = file.read().strip()
+
+                # Add to cumulative value (to be divided later to get mean)
+                values.append(float(value))
+
+        except Exception as E:
+            print(subject, ": ", E)
+
+    # Save mean motion value to dataframe
+    wdf.loc[subject, "motion"] = np.mean(values)
+
+# %%
+# Statistical analyses
+# ---------------------
+
+# Age vs motion
+# -----------
+
+# Compute correlation
+r, p = stats.pearsonr(wdf["motion"], wdf["age"])
+
+# Figure
+plt.figure(figsize=(3.625, 3.625))
+sns.regplot(data=wdf, x="age", y="motion", color="royalblue",
+            scatter_kws={"s": 25, "linewidth": 1, "edgecolor": "k"})
+plt.title(f"Age vs. Motion")
+plt.xlabel("Age in Years")
+plt.ylabel("Mean Relative RMS Motion")
+plt.annotate(f"r={r:.2f}\np={p:.2f}", xy=(0.7, 0.85),
+                xycoords="axes fraction", color="k", fontsize=10)
+plt.tight_layout(rect=(0, 0, 1, 1))
+plt.savefig(OUTDIR + "fig_hcp_age_vs_motion.pdf", transparent=True, dpi=300)
+
+# Motion vs instability
+# -----------
+
+# Compute correlation
+r, p = stats.pearsonr(wdf["motion"], wdf["instability"])
+
+# Figure
+plt.figure(figsize=(3.625, 3.625))
+sns.regplot(data=wdf, x="motion", y="instability", color="lightseagreen",
+            scatter_kws={"s": 25, "linewidth": 1, "edgecolor": "k"})
+plt.title(f"Motion vs. Instability")
+plt.xlabel("Mean Relative RMS Motion")
+plt.ylabel("Brain Network Instability")
+plt.annotate(f"r={r:.2f}\np={p:.2f}", xy=(0.7, 0.1),
+                xycoords="axes fraction", color="k", fontsize=10)
+plt.tight_layout(rect=(0, 0, 1, 1))
+plt.savefig(OUTDIR + "fig_hcp_motion_vs_instability.pdf", transparent=True, dpi=300)
+
+# Mediation analysis
+mediation_results = pg.mediation_analysis(data=wdf, x="motion", m="age", y="instability")
+print(mediation_results)

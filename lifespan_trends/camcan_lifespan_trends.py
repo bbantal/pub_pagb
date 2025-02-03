@@ -297,12 +297,19 @@ df_null = df.shape[0] - 1
 df_lin = df.shape[0] - 2
 
 # F-statistic
-F = ((rss_null - rss_model) / (df_null - df_model)) / (rss_model / df_model)
-F = ((rss_lin - rss_model) / (df_lin - df_model)) / (rss_model / df_model)
+F_sig_null = ((rss_null - rss_model) / (df_null - df_model)) / (rss_model / df_model)
+F_sig_lin = ((rss_lin - rss_model) / (df_lin - df_model)) / (rss_model / df_model)
+F_lin_null = ((rss_null - rss_lin) / (df_null - df_lin)) / (rss_lin / df_lin)
 
-# P value
-p_value = 1 - stats.f.cdf(F, df_null, df_model)
-print("F-test:", F, p_value)
+# P values
+p_value_sig_lin = 1 - stats.f.cdf(F_sig_lin, df_lin, df_model)
+print("F-test (sig vs lin):", F_sig_lin, p_value_sig_lin)
+
+p_value_lin_null = 1 - stats.f.cdf(F_lin_null, df_null, df_lin)
+print("F-test (lin vs null):", F_lin_null, p_value_lin_null)
+
+p_value_sig_null = 1 - stats.f.cdf(F_sig_null, df_null, df_model)
+print("F-test (sig vs null):", F_sig_null, p_value_sig_null)
 
 # Fit a linear model using stats models
 model = smf.ols(formula="stability ~ age", data=df)

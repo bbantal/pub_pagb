@@ -13,21 +13,12 @@ and statistical maps of age-related effects in ALFF from UKB and HCP-A datasets.
 # %%
 
 import os
-import sys
-
-sys.path.append(os.path.expanduser("~/utils/"))
-
-import ggl_api
 import pandas as pd
 import numpy as np
-import nibabel as nib
 import itertools
-from nilearn import image, masking, plotting, maskers
-from sklearn import linear_model
 import statsmodels.api as sm
 import seaborn as sns
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 from scipy import stats
 from tqdm import tqdm
 
@@ -221,16 +212,12 @@ def load_gene(gene_name):
     maps[gene_name] = gene_exp_data[gene_name].reset_index(drop=True).to_numpy()
     masks[gene_name] = mask_gene_exp
 
-# GLUT genes
+# Metabolic genes
 load_gene("SLC2A1")  # GLUT1
 load_gene("SLC2A3")  # GLUT3
 load_gene("SLC2A4")  # GLUT4
-
-# MCT genes
 load_gene("SLC16A1")  # MCT1
 load_gene("SLC16A7")  # MCT2
-
-# # APO genes
 load_gene("APOE")  # APOE
 
 # Vascular health related genes
@@ -238,15 +225,24 @@ load_gene("NOS1")  # NOS1
 load_gene("ACE")  # NOS2
 load_gene("EDN1")  # NOS3
 load_gene("VEGFA")  # VEGFA
+load_gene("VEGFB")  # VEGFB
+load_gene("FLT1") # VEGFR1
 
-# # Inflammation related genes
+# Inflammation related genes
 load_gene("TNF")  # TNF
 load_gene("TNFRSF1A")  # TNF receptor
 load_gene("IL1B") # IL1B
 load_gene("IL6R")  # IL6
+load_gene("IL23A")  # IL-23A
+load_gene("P2RX7")  # P2X7
 
-# Other genes
+# Unrelated negative control genes
+load_gene("ACTB")  # ACTB
 load_gene("NEFL")  # NEFL
+load_gene("GAPDH")  # GAPDH
+load_gene("PGK1")  # PGK1
+load_gene("EEF1A1")  # EEF1A1
+load_gene("RPL13A")  # RPL13A
 
 # %%
 # =============================================================================
@@ -406,7 +402,7 @@ for i, combo in tqdm(enumerate(combos), total=len(combos)):
 # -------------------------------------------------------------------------------------
 
 # Bonferroni correction
-correction_factor = 14 # Equals to the number of relevant tests run in parallel
+correction_factor = 24 # Equals to the number of relevant tests run in parallel
 alpha = 0.05 / correction_factor
 
 # Zero out p values for tiles where significance is too low (but not where it wasn't evaluated)
@@ -460,7 +456,7 @@ p_df.loc["age-hcp", "APOE"]
 # =============================================================================
 
 # %%
-# Plot pairwise scatterplots
+# Plot pairwise scatterplots (Figure 2C)
 # ---------------------
 
 # rc formatting
@@ -584,13 +580,13 @@ for j, combo in enumerate(combos):
 
 # Save
 plt.tight_layout() #rect=[ 0, 0.02, 1, 1])
-plt.savefig("/shared/home/botond/results/pagb/" + "fig_geneexp_scatter_column.pdf",
-            transparent=True, dpi=300)
+# plt.savefig("/shared/home/botond/results/pagb/" + "fig_geneexp_scatter_column.pdf",
+#             transparent=True, dpi=300)
 # plt.savefig(OUTDIR + f"scatter_{combo[0]}_{combo[1]}.pdf", transparent=True, dpi=300)
 # plt.savefig(f"/Users/benett/Desktop/{combo}.png", dpi=300)
 
 # %%
-# [x] Plot cropped similarity matrix (vertical version): v1
+# Plot cropped similarity matrix (Figure 2B)
 # ---------------------
 
 # Names
@@ -604,14 +600,24 @@ names = {
     "SLC16A7": "MCT2",
     "APOE": "APOE",
     "TNF": "TNF",
-    "TNFRSF1A": "TNF rec1",
-    "IL1B": "IL-1β",
-    "IL6R": "IL-6",
+    "TNFRSF1A": "TNFRSF1A",
+    "IL1B": "IL-1B",
+    "IL6R": "IL-6R",
+    "IL23A": "IL-23A",
+    "P2RX7": "P2RX7",
     "NOS1": "NOS1",
     "ACE": "ACE",
     "EDN1": "ET-1",
     "VEGFA": "VEGFA",
-    "NEFL": "NF-L"
+    "VEGFB": "VEGFB",
+    "FLT1": "VEGFR1",
+    "ACTB": "β-actin",
+    "NEFL": "NF-L",
+    "GAPDH": "GAPDH",
+    "PGK1": "PGK1",
+    "EEF1A1": "EEF1A1",
+    "RPL13A": "RPL13A",
+    
 }
 
 # Ticklabels
@@ -619,15 +625,21 @@ xticklabels = [names[item] for item in list(maps.keys())[:2]]
 yticklabels = [names[item] for item in list(maps.keys())[2:]]
 
 # Crop sim matrix
-mat_gf = sim_mat[:2, 2:].T
+mat_gf_full = sim_mat[:2, 2:].T
 
-# Plot
-plt.figure(figsize=(3, 6))
+# Figure
+plt.figure(figsize=(4, 7.5))
+
+# Get subset of genes for current axis
+inds = np.arange(24)
+mat_gf = mat_gf_full[inds, :]
+
+# Plot heatmap for current axis
 sns.heatmap(
     mat_gf, annot=True, cmap="RdBu_r", center=0, vmin=-0.5, vmax=0.5,
     mask=mat_gf==0,
     linewidth=0.5, linecolor="black", annot_kws={"fontsize": 8, "rotation": 0},
-    xticklabels=xticklabels, yticklabels=yticklabels,
+    xticklabels=xticklabels, yticklabels=np.array(yticklabels)[inds],
     square=True, cbar=False)
 
 # Spines
@@ -639,10 +651,10 @@ for sp in ['bottom', 'top', 'left', 'right']:
 # Format
 plt.tick_params(axis='both', which='both', bottom=False, top=False, left=False, right=False)
 plt.tick_params(axis='x', which='major', pad=20)
-plt.xticks(rotation=90, fontsize=9, ha="center", va="center")
-plt.yticks(rotation=0, fontsize=9)
+plt.xticks(rotation=90, fontsize=11, ha="center", va="center")
+plt.yticks(rotation=0, fontsize=11)
 
 # Save
 plt.tight_layout()
-plt.savefig("/shared/home/botond/results/pagb/" + f"fig_geneexp_simmat_vertical.pdf",
-            transparent=True, dpi=300)
+# plt.savefig("/shared/home/botond/results/pagb/" + f"fig_geneexp_simmat_vertical.pdf",
+#             transparent=True, dpi=300)
