@@ -1,4 +1,4 @@
-# pub_pagb
+# Protecting the Aging Brain (PAgB)
 
 This repository contains all scripts used to produce the results presented in our related article:
 
